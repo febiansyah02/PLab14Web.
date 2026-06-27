@@ -1,61 +1,56 @@
-# CodeIgniter 4 Framework
+# Laporan Praktikum Pemrograman Web 2
+## Pertemuan 14: Keamanan API, Autentikasi Token, dan Axios Interceptors
 
-## What is CodeIgniter?
+---
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+## 📝 1. Deskripsi Tugas & Analisis
+[cite_start]Praktikum ini berfokus pada implementasi **Server-Side Security** (Keamanan di sisi Server) untuk melengkapi sistem keamanan browser yang telah dibangun pada praktikum sebelumnya[cite: 16, 18]. 
 
-This repository holds the distributable version of the framework.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+### Kesimpulan Analisis Perbedaan Keamanan:
+* [cite_start]**Vue Router Navigation Guards (Client-Side Security):** Hanya berfungsi menjaga pintu gerbang *User Interface* (UI) pada browser agar halaman internal tidak bisa diklik secara visual[cite: 16]. [cite_start]Namun, database masih rawan dibobol jika endpoint REST API ditembak langsung menggunakan tools luar[cite: 17].
+* [cite_start]**CodeIgniter Filters (Server-Side Security):** Merupakan benteng pertahanan utama database[cite: 18]. [cite_start]Filter bekerja di latar belakang server untuk mencegat setiap *request* manipulasi data dan memvalidasi keberadaan token spesifik pada HTTP Header sebelum memberikan izin akses data[cite: 20, 28].
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+---
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+## 🛠️ 2. Komponen & Lingkungan Jaringan
+Aplikasi berjalan pada arsitektur terpisah (*Decoupled Architecture*) menggunakan pemetaan port local berikut:
+* [cite_start]**Frontend SPA Server (VueJS 3):** `http://localhost/lab8_vuejs/` (Dijalankan via Apache XAMPP Port `80`) [cite: 11, 13]
+* **Backend REST API Server (CodeIgniter 4):** `http://localhost:8080` (Dijalankan via CLI Spark Serve)
+* [cite_start]**Database Management:** MySQL / MariaDB dengan nama database `lab_ci4`[cite: 11].
 
-## Important Change with index.php
+---
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+## 📂 3. Struktur Berkas Proyek Aktif
+Berikut adalah letak komponen-komponen utama yang terintegrasi pada Praktikum 14:
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
-
-**Please** read the user guide for a better explanation of how CI4 works!
-
-## Repository Management
-
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
-
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
-
-## Contributing
-
-We welcome contributions from the community.
-
-Please read the [*Contributing to CodeIgniter*](https://github.com/codeigniter4/CodeIgniter4/blob/develop/CONTRIBUTING.md) section in the development repository.
-
-## Server Requirements
-
-PHP version 8.2 or higher is required, with the following extensions installed:
-
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
-
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
-
-Additionally, make sure that the following extensions are enabled in your PHP:
-
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+```text
+proyek-spa/
+├── lab8_vuejs/                  # DIREKTORI FRONTEND (VUEJS 3)
+│   ├── assets/
+│   │   ├── css/
+│   │   │   └── style.css        # Layouting & Form Box Login
+│   │   └── js/
+│   │       ├── components/
+│   │       │   ├── About.js     # Komponen Halaman Profil
+│   │       │   ├── Artikel.js   # Komponen CRUD Artikel
+│   │       │   ├── Home.js      # Komponen Beranda
+│   │       │   └── Login.js     # Komponen Form Login Admin
+│   │       └── app.js           # Core Router & Axios Interceptors Global
+│   └── index.html               # Main Single Page HTML
+│
+└── lab11_ci/                    # DIREKTORI BACKEND (CODEIGNITER 4)
+    └── ci4/
+        ├── app/
+        │   ├── Config/
+        │   │   ├── Filters.php  # Registrasi Core & Custom Filter Aliases
+        │   │   └── Routes.php   # Pemetaan Jalur Proteksi REST API Resource
+        │   ├── Controllers/
+        │   │   ├── Api/
+        │   │   │   └── Auth.php # Controller Autentikasi & Injeksi CORS
+        │   │   └── Post.php     # Resource Controller Data Artikel
+        │   ├── Filters/
+        │   │   └── ApiAuthFilter.php # Script Mencegat & Validasi HTTP Token
+        │   └── Models/
+        │       └── UserModel.php # Model Koneksi Data Akun Tabel User
+        └── .env                 # Konfigurasi Environment & Database `lab_ci4`
+```
