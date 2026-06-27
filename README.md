@@ -1,127 +1,262 @@
 # Laporan Praktikum Pemrograman Web 2
+
 ## Pertemuan 14: Keamanan API, Autentikasi Token, dan Axios Interceptors
 
 ---
 
-## 📝 1. Deskripsi Tugas & Analisis
-[cite_start]Praktikum ini berfokus pada implementasi **Server-Side Security** (Keamanan di sisi Server) untuk melengkapi sistem keamanan browser yang telah dibangun pada praktikum sebelumnya[cite: 16, 18]. 
+# 1. Deskripsi Tugas dan Analisis
 
-### Kesimpulan Analisis Perbedaan Keamanan:
-* [cite_start]**Vue Router Navigation Guards (Client-Side Security):** Hanya berfungsi menjaga pintu gerbang *User Interface* (UI) pada browser agar halaman internal tidak bisa diklik secara visual[cite: 16]. [cite_start]Namun, database masih rawan dibobol jika endpoint REST API ditembak langsung menggunakan tools luar[cite: 17].
-* [cite_start]**CodeIgniter Filters (Server-Side Security):** Merupakan benteng pertahanan utama database[cite: 18]. [cite_start]Filter bekerja di latar belakang server untuk mencegat setiap *request* manipulasi data dan memvalidasi keberadaan token spesifik pada HTTP Header sebelum memberikan izin akses data[cite: 20, 28].
+Praktikum ini berfokus pada implementasi **Server-Side Security (Keamanan di Sisi Server)** untuk melengkapi sistem keamanan browser yang telah dibangun pada praktikum sebelumnya.
+
+## Kesimpulan Analisis Perbedaan Keamanan
+
+### Vue Router Navigation Guards (Client-Side Security)
+
+Vue Router Navigation Guards hanya berfungsi menjaga pintu gerbang **User Interface (UI)** pada browser agar halaman internal tidak dapat diakses secara langsung oleh pengguna yang belum login.
+
+Namun, keamanan ini belum cukup karena database masih dapat diserang apabila endpoint REST API diakses langsung menggunakan tools seperti **Postman** atau aplikasi HTTP Client lainnya.
+
+### CodeIgniter Filters (Server-Side Security)
+
+CodeIgniter Filters merupakan benteng pertahanan utama pada sisi server. Filter bekerja di belakang layar untuk mencegat setiap request yang masuk, kemudian memvalidasi keberadaan token autentikasi pada HTTP Header sebelum mengizinkan akses ke database.
 
 ---
 
-## 🛠️ 2. Komponen & Lingkungan Jaringan
-Aplikasi berjalan pada arsitektur terpisah (*Decoupled Architecture*) menggunakan pemetaan port local berikut:
-* [cite_start]**Frontend SPA Server (VueJS 3):** `http://localhost/lab8_vuejs/` (Dijalankan via Apache XAMPP Port `80`) [cite: 11, 13]
-* **Backend REST API Server (CodeIgniter 4):** `http://localhost:8080` (Dijalankan via CLI Spark Serve)
-* [cite_start]**Database Management:** MySQL / MariaDB dengan nama database `lab_ci4`[cite: 11].
+# 2. Komponen dan Lingkungan Jaringan
+
+Aplikasi menggunakan arsitektur **Decoupled Architecture** dengan pembagian server sebagai berikut.
+
+* **Frontend SPA (VueJS 3)**
+  `http://localhost/lab8_vuejs/`
+  Dijalankan menggunakan Apache XAMPP pada Port **80**.
+
+* **Backend REST API (CodeIgniter 4)**
+  `http://localhost:8080`
+  Dijalankan menggunakan perintah:
+
+```bash
+php spark serve
+```
+
+* **Database**
+
+Menggunakan MySQL/MariaDB dengan nama database:
+
+```text
+lab_ci4
+```
 
 ---
 
-## 📂 3. Struktur Berkas Proyek Aktif
-Berikut adalah letak komponen-komponen utama yang terintegrasi pada Praktikum 14:
+# 3. Struktur Berkas Proyek
 
 ```text
 proyek-spa/
-├── lab8_vuejs/                  # DIREKTORI FRONTEND (VUEJS 3)
+├── lab8_vuejs/
 │   ├── assets/
 │   │   ├── css/
-│   │   │   └── style.css        # Layouting & Form Box Login
+│   │   │   └── style.css
 │   │   └── js/
 │   │       ├── components/
-│   │       │   ├── About.js     # Komponen Halaman Profil
-│   │       │   ├── Artikel.js   # Komponen CRUD Artikel
-│   │       │   ├── Home.js      # Komponen Beranda
-│   │       │   └── Login.js     # Komponen Form Login Admin
-│   │       └── app.js           # Core Router & Axios Interceptors Global
-│   └── index.html               # Main Single Page HTML
+│   │       │   ├── About.js
+│   │       │   ├── Artikel.js
+│   │       │   ├── Home.js
+│   │       │   └── Login.js
+│   │       └── app.js
+│   └── index.html
 │
-└── lab11_ci/                    # DIREKTORI BACKEND (CODEIGNITER 4)
+└── lab11_ci/
     └── ci4/
         ├── app/
         │   ├── Config/
-        │   │   ├── Filters.php  # Registrasi Core & Custom Filter Aliases
-        │   │   └── Routes.php   # Pemetaan Jalur Proteksi REST API Resource
+        │   │   ├── Filters.php
+        │   │   └── Routes.php
         │   ├── Controllers/
         │   │   ├── Api/
-        │   │   │   └── Auth.php # Controller Autentikasi & Injeksi CORS
-        │   │   └── Post.php     # Resource Controller Data Artikel
+        │   │   │   └── Auth.php
+        │   │   └── Post.php
         │   ├── Filters/
-        │   │   └── ApiAuthFilter.php # Script Mencegat & Validasi HTTP Token
+        │   │   └── ApiAuthFilter.php
         │   └── Models/
-        │       └── UserModel.php # Model Koneksi Data Akun Tabel User
-        └── .env                 # Konfigurasi Environment & Database `lab_ci4`
+        │       └── UserModel.php
+        └── .env
 ```
-💻 4. Implementasi Kode Sumber KunciA. Filter Validasi Token (app/Filters/ApiAuthFilter.php)Bertugas memeriksa kiriman HTTP Header Authorization dari klien .  PHP<?php
+
+---
+
+# 4. Implementasi Kode Sumber Kunci
+
+## A. Filter Validasi Token
+
+**Lokasi File**
+
+```text
+app/Filters/ApiAuthFilter.php
+```
+
+Filter ini bertugas memeriksa keberadaan **HTTP Header Authorization** pada setiap request yang masuk ke server.
+
+```php
+<?php
 
 namespace App\Filters;
 
-use CodeIgniter\Filters\FilterInterface; // cite: 33
-use CodeIgniter\Http\RequestInterface;  // cite: 34
-use CodeIgniter\Http\ResponseInterface; // cite: 35
-use Config\Services;                    // cite: 36
+use CodeIgniter\Filters\FilterInterface;
+use CodeIgniter\Http\RequestInterface;
+use CodeIgniter\Http\ResponseInterface;
+use Config\Services;
 
-class ApiAuthFilter implements FilterInterface // cite: 37
+class ApiAuthFilter implements FilterInterface
 {
-    public function before(RequestInterface $request, $arguments = null) // cite: 40
+    public function before(RequestInterface $request, $arguments = null)
     {
-        $authHeader = $request->getServer('HTTP_AUTHORIZATION'); // cite: 42
+        $authHeader = $request->getServer('HTTP_AUTHORIZATION');
 
-        if (!$authHeader) { // cite: 43
-            $response = Services::response(); // cite: 45
-            $response->setStatusCode(401); // cite: 46
-            return $response->setJSON([ // cite: 47
-                'status'   => 401, // cite: 48
-                'error'    => 401, // cite: 49
-                'messages' => 'Akses Ditolak. Token tidak ditemukan pada request!' // cite: 50
-            ]); // cite: 51
+        if (!$authHeader) {
+            $response = Services::response();
+            $response->setStatusCode(401);
+
+            return $response->setJSON([
+                'status'   => 401,
+                'error'    => 401,
+                'messages' => 'Akses Ditolak. Token tidak ditemukan pada request!'
+            ]);
         }
 
-        $token = null; // cite: 54
-        if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) { // cite: 55
-            $token = $matches[1]; // cite: 56
+        $token = null;
+
+        if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            $token = $matches[1];
         }
 
-        if (!$token || empty($token)) { // cite: 61
-            $response = Services::response(); // cite: 62
-            $response->setStatusCode(401); // cite: 66
-            return $response->setJSON([ // cite: 67
-                'status'   => 401, // cite: 71
-                'error'    => 401, // cite: 72
-                'messages' => 'Sesi Token tidak valid atau kedaluwarsa!' // cite: 73
-            ]); // cite: 70
+        if (!$token || empty($token)) {
+            $response = Services::response();
+            $response->setStatusCode(401);
+
+            return $response->setJSON([
+                'status'   => 401,
+                'error'    => 401,
+                'messages' => 'Sesi Token tidak valid atau kedaluwarsa!'
+            ]);
         }
     }
 
-    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null) {} // cite: 74
+    public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
+    {
+    }
 }
-B. Otomatisasi Frontend (assets/js/app.js - Axios Interceptors)Bertindak sebagai kurir otomatis yang menyisipkan token dari localStorage ke dalam HTTP Header secara global tanpa perlu mengetik kodenya manual di setiap fungsi komponen .  JavaScript// Interceptor Request: Suntik Token ke Header sebelum Request Keluar [cite: 106, 115]
+```
+
+---
+
+## B. Otomatisasi Frontend Menggunakan Axios Interceptors
+
+**Lokasi File**
+
+```text
+assets/js/app.js
+```
+
+Axios Interceptors bertugas sebagai mekanisme otomatis yang menyisipkan token autentikasi dari **localStorage** ke dalam HTTP Header sebelum request dikirim ke server.
+
+Selain itu, interceptor juga akan menangani respon **401 Unauthorized** dengan menghapus token, mengarahkan pengguna kembali ke halaman login, serta memuat ulang aplikasi.
+
+```javascript
 axios.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('userToken'); // cite: 118
-        if (token) { // cite: 119
-            config.headers['Authorization'] = 'Bearer ' + token; // cite: 120
+        const token = localStorage.getItem('userToken');
+
+        if (token) {
+            config.headers['Authorization'] = 'Bearer ' + token;
         }
-        return config; // cite: 122
+
+        return config;
     },
-    (error) => Promise.reject(error) // cite: 125
+    (error) => Promise.reject(error)
 );
 
-// Interceptor Response: Tangkap Eror 401 dan tendang paksa jika token kedaluwarsa [cite: 128-129, 134]
 axios.interceptors.response.use(
-    (response) => response, // cite: 131
+    (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) { // cite: 134
-            alert('Sesi Anda telah berakhir atau Token tidak sah. Silakan login kembali.'); // cite: 135
-            localStorage.clear(); // cite: 136
-            window.location.href = '#/login'; // cite: 137
-            window.location.reload(); // cite: 143
+
+        if (error.response && error.response.status === 401) {
+
+            alert('Sesi Anda telah berakhir atau Token tidak sah. Silakan login kembali.');
+
+            localStorage.clear();
+
+            window.location.href = '#/login';
+
+            window.location.reload();
         }
-        return Promise.reject(error); // cite: 144
+
+        return Promise.reject(error);
     }
 );
-⚙️ 5. Langkah Menjalankan & Pengujian End-to-End1. Aktivasi Server & DatabasePastikan database lab_ci4 aktif di phpMyAdmin dengan data user bertipe hash bcrypt pada kolom userpassword.Jalankan server backend via command line terminal: php spark serve.2. Pengujian Keamanan Pintu Belakang (Simulasi Pembobolan via Postman)Lakukan request menggunakan Postman ke URL endpoint manipulasi data backend: http://localhost:8080/post dengan metode POST tanpa menyertakan token di bagian header.  Hasil Diharapkan: Server CodeIgniter 4 menolak secara mutlak dan mengembalikan kode status 401 Unauthorized beserta pesan JSON proteksi.
-(Lampiaskan Screenshot Bukti Respon Error 401 dari Postman di Sini)   3. Pengujian Transmisi Data Sukses (Aplikasi Browser)Buka browser, lakukan pembersihan cache via Ctrl + F5, lalu lakukan login menggunakan akun administrator yang valid.Lakukan operasi Tambah/Ubah/Hapus data artikel. Berkat Axios Interceptors, data akan terkirim mulus ke database server secara rahasia di latar belakang.  Buka menu F12 (Developer Tools) -> tab Network -> klik pada nama request API post untuk memverifikasi bahwa parameter Authorization: Bearer <token> telah berhasil disuntikkan secara otomatis.
-(Lampiaskan Screenshot Bukti Parameter Authorization Bearer pada Tab Network Browser di Sini)
+```
+
+---
+
+# 5. Langkah Menjalankan dan Pengujian End-to-End
+
+## 5.1 Aktivasi Server dan Database
+
+Pastikan database **lab_ci4** telah aktif pada phpMyAdmin dan tabel **user** telah berisi password yang dienkripsi menggunakan **bcrypt**.
+
+Jalankan backend CodeIgniter menggunakan perintah:
+
+```bash
+php spark serve
+```
+
+Pastikan frontend VueJS juga telah berjalan melalui Apache XAMPP.
+
+---
+
+## 5.2 Pengujian Keamanan Pintu Belakang (Postman)
+
+Lakukan request menggunakan **Postman** menuju endpoint:
+
+```text
+POST http://localhost:8080/post
+```
+
+Tanpa menambahkan header:
+
+```text
+Authorization: Bearer <token>
+```
+
+### Hasil yang Diharapkan
+
+Server akan menolak request dan mengembalikan respon:
+
+* Status Code **401 Unauthorized**
+* Pesan JSON bahwa token tidak ditemukan atau tidak valid.
+
+**Lampirkan screenshot hasil respon 401 dari Postman pada bagian ini.**
+
+---
+
+## 5.3 Pengujian Transmisi Data Melalui Browser
+
+1. Buka aplikasi pada browser.
+2. Tekan **Ctrl + F5** untuk membersihkan cache.
+3. Login menggunakan akun administrator.
+4. Lakukan operasi Tambah, Ubah, atau Hapus artikel.
+5. Buka **Developer Tools (F12)**.
+6. Pilih tab **Network**.
+7. Klik salah satu request menuju endpoint **post**.
+8. Periksa bagian **Request Headers**.
+
+### Hasil yang Diharapkan
+
+Terlihat header berikut telah dikirim secara otomatis oleh Axios Interceptors.
+
+```text
+Authorization: Bearer <token>
+```
+
+Hal tersebut menunjukkan bahwa token autentikasi berhasil disisipkan secara otomatis ke setiap request menuju server.
+
+**Lampirkan screenshot Request Header yang menampilkan Authorization Bearer pada bagian ini.**
