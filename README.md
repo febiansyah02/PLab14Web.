@@ -234,8 +234,6 @@ Server akan menolak request dan mengembalikan respon:
 * Status Code **401 Unauthorized**
 * Pesan JSON bahwa token tidak ditemukan atau tidak valid.
 
-**Lampirkan screenshot hasil respon 401 dari Postman pada bagian ini.**
-
 ---
 
 ## 5.3 Pengujian Transmisi Data Melalui Browser
@@ -258,5 +256,3 @@ Authorization: Bearer <token>
 ```
 
 Hal tersebut menunjukkan bahwa token autentikasi berhasil disisipkan secara otomatis ke setiap request menuju server.
-
-**Lampirkan screenshot Request Header yang menampilkan Authorization Bearer pada bagian ini.**
